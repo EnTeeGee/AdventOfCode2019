@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
@@ -78,9 +79,13 @@ namespace AdventOfCode2019.Common
 
             try
             {
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
                 var result = solutionMapping.Method.Invoke(instance, new object[] { input });
+                stopwatch.Stop();
                 Console.WriteLine($"Solution for day {solutionMapping.Day}, problem {solutionMapping.Problem}:");
                 Console.WriteLine(result);
+                Console.WriteLine($"Elapsed time: {stopwatch.Elapsed.TotalSeconds} seconds");
                 this.WriteDataToClipboard(result?.ToString() ?? string.Empty);
                 Console.WriteLine("Result copied to clipboard.");
             }

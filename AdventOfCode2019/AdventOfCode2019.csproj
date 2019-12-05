@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\Intcode.cs" />
     <Compile Include="Common\Manager.cs" />
     <Compile Include="Common\Mapper.cs" />
     <Compile Include="Common\SolutionAttribute.cs" />
@@ -53,6 +54,7 @@
     <Compile Include="Solutions\Day02.cs" />
     <Compile Include="Solutions\Day03.cs" />
     <Compile Include="Solutions\Day04.cs" />
+    <Compile Include="Solutions\Day05.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

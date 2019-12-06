@@ -55,6 +55,7 @@
     <Compile Include="Solutions\Day03.cs" />
     <Compile Include="Solutions\Day04.cs" />
     <Compile Include="Solutions\Day05.cs" />
+    <Compile Include="Solutions\Day06.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

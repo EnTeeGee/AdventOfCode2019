@@ -8,13 +8,22 @@ namespace AdventOfCode2019.Common
     {
         private int[] program;
         private int index;
-        private bool hasHalted;
+        private bool needsInput;
         private Queue<int> inputs;
         private List<int> outputs;
+
+        public bool HasHalted { get; private set; }
 
         public Intcode(string input)
         {
             program = Mapper.ToCsvInts(input);
+            inputs = new Queue<int>();
+            outputs = new List<int>();
+        }
+
+        public Intcode(int[] input)
+        {
+            program = input.ToArray();
             inputs = new Queue<int>();
             outputs = new List<int>();
         }
@@ -26,7 +35,10 @@ namespace AdventOfCode2019.Common
 
         public int[] RunToEnd()
         {
-            while (!hasHalted)
+            if (inputs.Any() && needsInput)
+                needsInput = false;
+
+            while (!HasHalted && !needsInput)
                 RunStep();
 
             return outputs.ToArray();
@@ -34,7 +46,7 @@ namespace AdventOfCode2019.Common
 
         private void RunStep()
         {
-            if (hasHalted)
+            if (HasHalted)
                 return;
 
             var instruction = program[index].ToString().PadLeft(5, '0');
@@ -69,7 +81,7 @@ namespace AdventOfCode2019.Common
                     RunEquals(param1Pos, param2Pos);
                     break;
                 case "99":
-                    hasHalted = true;
+                    HasHalted = true;
                     break;
                 default:
                     throw new Exception("Unexpected opcode");
@@ -95,9 +107,13 @@ namespace AdventOfCode2019.Common
         private void RunRead()
         {
             if (!inputs.Any())
+            {
+                needsInput = true;
                 return;
+            }
 
-            program[program[index + 1]] = Convert.ToInt32(inputs.Dequeue());
+            needsInput = false;
+            program[program[index + 1]] = inputs.Dequeue();
             index += 2;
         }
 

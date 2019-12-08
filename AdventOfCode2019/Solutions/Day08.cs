@@ -1,7 +1,6 @@
 ﻿using AdventOfCode2019.Common;
 using System;
 using System.Linq;
-using System.Text;
 
 namespace AdventOfCode2019.Solutions
 {
@@ -36,16 +35,10 @@ namespace AdventOfCode2019.Solutions
                 .Select(it => GetIsBlack(it))
                 .ToArray();
 
-            var result1 = Enumerable.Range(0, CharPerLayer).ToList();
-            var result2 = result1.Select(it => Enumerable.Range(0, layers).Select(index => (index * CharPerLayer) + it).ToArray()).ToList();
-            var result3 = result2.Select(it => it.Select(index => input[index]).ToArray()).ToList();
-            var result4 = result3.Select(it => GetIsBlack(it)).ToList();
-
             return Enumerable.Range(0, Height)
-                .Select(it => result.Skip(it * Width).Take(Width).Select(isBlack => isBlack ? '_' : '#').ToArray())
+                .Select(it => result.Skip(it * Width).Take(Width).Select(isBlack => isBlack ? ' ' : '#').ToArray())
                 .Select(it => new string(it))
-                .Aggregate(new StringBuilder(), (a, b) => a.Append(b + Environment.NewLine))
-                .ToString();
+                .Aggregate(string.Empty, (a, b) => a + b + Environment.NewLine);
         }
 
         private bool GetIsBlack(char[] array)

@@ -24,5 +24,10 @@ namespace AdventOfCode2019.Common
         {
             return ToCsvs(input).Select(it => Convert.ToInt32(it)).ToArray();
         }
+
+        public static long[] ToCsvLongs(string input)
+        {
+            return ToCsvs(input).Select(it => Convert.ToInt64(it)).ToArray();
+        }
     }
 }

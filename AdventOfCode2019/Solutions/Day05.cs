@@ -13,7 +13,7 @@ namespace AdventOfCode2019.Solutions
 
             var output = program.RunToEnd();
 
-            return output.Last();
+            return (int)output.Last();
         }
 
         [Solution(5, 2)]
@@ -24,7 +24,7 @@ namespace AdventOfCode2019.Solutions
 
             var output = program.RunToEnd();
 
-            return output.Last();
+            return (int)output.Last();
         }
     }
 }

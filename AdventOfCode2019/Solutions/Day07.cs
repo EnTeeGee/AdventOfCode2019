@@ -29,13 +29,13 @@ namespace AdventOfCode2019.Solutions
 
                 if (remainingPhases.Count == 1)
                 {
-                    found.Add(result);
+                    found.Add((int)result);
                     continue;
                 } 
 
                 var leftover = remainingPhases.Where(it => it != item).ToList();
 
-                found.Add(leftover.Select(it => GetHighest(input, result, leftover)).Max());
+                found.Add(leftover.Select(it => GetHighest(input, (int)result, leftover)).Max());
             }
 
             return found.Max();
@@ -97,7 +97,7 @@ namespace AdventOfCode2019.Solutions
                 {
                     item.AddInput(currentResult);
                     var generated = item.RunToEnd();
-                    currentResult = generated.Last();
+                    currentResult = (int)generated.Last();
                 }
             }
 

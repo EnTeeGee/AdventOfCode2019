@@ -6,38 +6,47 @@ namespace AdventOfCode2019.Common
 {
     public class Intcode
     {
-        private int[] program;
-        private int index;
+        private enum Mode { Position, Absolute, Relative }
+
+        private static readonly Dictionary<char, Mode> ModeMapping = new Dictionary<char, Mode>
+        {
+            { '0', Mode.Position },
+            { '1', Mode.Absolute },
+            { '2', Mode.Relative }
+        };
+
+        private long[] program;
         private bool needsInput;
         private Queue<int> inputs;
-        private List<int> outputs;
+        private List<long> outputs;
+        private long relativeBase;
 
+        public long Index { get; private set; }
         public bool HasHalted { get; private set; }
+        public IEnumerable<long> Outputs => outputs;
 
         public Intcode(string input)
         {
-            program = Mapper.ToCsvInts(input);
+            program = Mapper.ToCsvLongs(input);
             inputs = new Queue<int>();
-            outputs = new List<int>();
+            outputs = new List<long>();
         }
 
         public Intcode(int[] input)
         {
-            program = input.ToArray();
+            program = input.Select(it => (long)it).ToArray();
             inputs = new Queue<int>();
-            outputs = new List<int>();
+            outputs = new List<long>();
         }
 
         public void AddInput(int input)
         {
             inputs.Enqueue(input);
+            needsInput = false;
         }
 
-        public int[] RunToEnd()
+        public long[] RunToEnd()
         {
-            if (inputs.Any() && needsInput)
-                needsInput = false;
-
             while (!HasHalted && !needsInput)
                 RunStep();
 
@@ -49,36 +58,39 @@ namespace AdventOfCode2019.Common
             if (HasHalted)
                 return;
 
-            var instruction = program[index].ToString().PadLeft(5, '0');
-            var param1Pos = instruction[2] == '0';
-            var param2Pos = instruction[1] == '0';
-            var param3Pos = instruction[0] == '0';
+            var instruction = program[Index].ToString().PadLeft(5, '0');
+            var param1Mode = ModeMapping[instruction[2]];
+            var param2Mode = ModeMapping[instruction[1]];
+            var param3Mode = ModeMapping[instruction[0]];
 
             switch (instruction.Substring(3))
             {
                 case "01":
-                    RunAddition(param1Pos, param2Pos);
+                    RunAddition(param1Mode, param2Mode, param3Mode);
                     break;
                 case "02":
-                    RunMultiply(param1Pos, param2Pos);
+                    RunMultiply(param1Mode, param2Mode, param3Mode);
                     break;
                 case "03":
-                    RunRead();
+                    RunRead(param1Mode);
                     break;
                 case "04":
-                    RunWrite(param1Pos);
+                    RunWrite(param1Mode);
                     break;
                 case "05":
-                    RunJumpIfTrue(param1Pos, param2Pos);
+                    RunJumpIfTrue(param1Mode, param2Mode);
                     break;
                 case "06":
-                    RunJumpIfFalse(param1Pos, param2Pos);
+                    RunJumpIfFalse(param1Mode, param2Mode);
                     break;
                 case "07":
-                    RunLessThan(param1Pos, param2Pos);
+                    RunLessThan(param1Mode, param2Mode, param3Mode);
                     break;
                 case "08":
-                    RunEquals(param1Pos, param2Pos);
+                    RunEquals(param1Mode, param2Mode, param3Mode);
+                    break;
+                case "09":
+                    RunRelativeBaseOffset(param1Mode);
                     break;
                 case "99":
                     HasHalted = true;
@@ -88,23 +100,23 @@ namespace AdventOfCode2019.Common
             }
         }
 
-        private void RunAddition(bool param1Pos, bool param2Pos)
+        private void RunAddition(Mode param1Mode, Mode param2Mode, Mode param3Mode)
         {
-            var a = GetAtPos(1, param1Pos);
-            var b = GetAtPos(2, param2Pos);
-            program[program[index + 3]] = a + b;
-            index += 4;
+            var a = GetAtPos(1, param1Mode);
+            var b = GetAtPos(2, param2Mode);
+            WriteToPos(a + b, 3, param3Mode);
+            Index += 4;
         }
 
-        private void RunMultiply(bool param1Pos, bool param2Pos)
+        private void RunMultiply(Mode param1Mode, Mode param2Mode, Mode param3Mode)
         {
-            var a = GetAtPos(1, param1Pos);
-            var b = GetAtPos(2, param2Pos);
-            program[program[index + 3]] = a * b;
-            index += 4;
+            var a = GetAtPos(1, param1Mode);
+            var b = GetAtPos(2, param2Mode);
+            WriteToPos(a * b, 3, param3Mode);
+            Index += 4;
         }
 
-        private void RunRead()
+        private void RunRead(Mode param1Mode)
         {
             if (!inputs.Any())
             {
@@ -113,54 +125,103 @@ namespace AdventOfCode2019.Common
             }
 
             needsInput = false;
-            program[program[index + 1]] = inputs.Dequeue();
-            index += 2;
+            WriteToPos(inputs.Dequeue(), 1, param1Mode);
+            Index += 2;
         }
 
-        private void RunWrite(bool param1Pos)
+        private void RunWrite(Mode param1Mode)
         {
-            outputs.Add(GetAtPos(1, param1Pos));
-            index += 2;
+            outputs.Add(GetAtPos(1, param1Mode));
+            Index += 2;
         }
 
-        private void RunJumpIfTrue(bool param1Pos, bool param2Pos)
+        private void RunJumpIfTrue(Mode param1Mode, Mode param2Mode)
         {
-            var val = GetAtPos(1, param1Pos);
+            var val = GetAtPos(1, param1Mode);
             if (val != 0)
-                index = GetAtPos(2, param2Pos);
+                Index = GetAtPos(2, param2Mode);
             else
-                index += 3;
+                Index += 3;
         }
 
-        private void RunJumpIfFalse(bool param1Pos, bool param2Pos)
+        private void RunJumpIfFalse(Mode param1Mode, Mode param2Mode)
         {
-            var val = GetAtPos(1, param1Pos);
+            var val = GetAtPos(1, param1Mode);
             if (val == 0)
-                index = GetAtPos(2, param2Pos);
+                Index = GetAtPos(2, param2Mode);
             else
-                index += 3;
+                Index += 3;
         }
 
-        private void RunLessThan(bool param1Pos, bool param2Pos)
+        private void RunLessThan(Mode param1Mode, Mode param2Mode, Mode param3Mode)
         {
-            var a = GetAtPos(1, param1Pos);
-            var b = GetAtPos(2, param2Pos);
-            program[program[index + 3]] = (a < b ? 1 : 0);
-            index += 4;
+            var a = GetAtPos(1, param1Mode);
+            var b = GetAtPos(2, param2Mode);
+            WriteToPos((a < b ? 1 : 0), 3, param3Mode);
+            Index += 4;
         }
 
-        private void RunEquals(bool param1Pos, bool param2Pos)
+        private void RunEquals(Mode param1Mode, Mode param2Mode, Mode param3Mode)
         {
-            var a = GetAtPos(1, param1Pos);
-            var b = GetAtPos(2, param2Pos);
-            program[program[index + 3]] = (a == b ? 1 : 0);
-            index += 4;
+            var a = GetAtPos(1, param1Mode);
+            var b = GetAtPos(2, param2Mode);
+            WriteToPos((a == b ? 1 : 0), 3, param3Mode);
+            Index += 4;
+        }
+
+        private void RunRelativeBaseOffset(Mode param1Mode)
+        {
+            relativeBase += GetAtPos(1, param1Mode);
+            Index += 2;
         }
 
 
-        private int GetAtPos(int offset, bool posMode)
+        private long GetAtPos(int offset, Mode posMode)
         {
-            return posMode ? program[program[index + offset]] : program[index + offset];
+            ExpandTo(Index + offset);
+
+            switch (posMode)
+            {
+                case Mode.Position:
+                    ExpandTo(program[Index + offset]);
+                    return program[program[Index + offset]];
+                case Mode.Absolute:
+                    ExpandTo(Index + offset);
+                    return program[Index + offset];
+                case Mode.Relative:
+                    ExpandTo(relativeBase + program[Index + offset]);
+                    return program[relativeBase + program[Index + offset]];
+                default:
+                    throw new Exception("Unepxected prameter mode");
+            }
+        }
+
+        private void WriteToPos(long value, int offset, Mode posMode)
+        {
+            ExpandTo(Index + offset);
+
+            switch (posMode)
+            {
+                case Mode.Position:
+                    ExpandTo(program[Index + offset]);
+                    program[program[Index + offset]] = value;
+                    break;
+                case Mode.Relative:
+                    ExpandTo(relativeBase + program[Index + offset]);
+                    program[relativeBase + program[Index + offset]] = value;
+                    break;
+                default:
+                    throw new Exception("Unexpected write parameter mode");
+            }
+        }
+
+        private void ExpandTo(long limit)
+        {
+            if (limit < program.Length)
+                return;
+
+            var range = limit + 1 - program.Length;
+            program = program.Concat(new long[range]).ToArray();
         }
     }
 }

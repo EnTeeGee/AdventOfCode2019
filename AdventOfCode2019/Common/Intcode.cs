@@ -18,6 +18,7 @@ namespace AdventOfCode2019.Common
         private long[] program;
         private bool needsInput;
         private Queue<int> inputs;
+        private int? constInput;
         private List<long> outputs;
         private long relativeBase;
 
@@ -45,12 +46,32 @@ namespace AdventOfCode2019.Common
             needsInput = false;
         }
 
+        public void SetConstInput(int? input)
+        {
+            constInput = input;
+            needsInput = input == null && !inputs.Any();
+        }
+
         public long[] RunToEnd()
         {
             while (!HasHalted && !needsInput)
                 RunStep();
 
             return outputs.ToArray();
+        }
+
+        public long? RunToOutput()
+        {
+            var currentLength = outputs.Count();
+
+            while (outputs.Count() == currentLength)
+            {
+                RunStep();
+                if (HasHalted || needsInput)
+                    return null;
+            }
+
+            return outputs.Last();
         }
 
         private void RunStep()
@@ -118,14 +139,15 @@ namespace AdventOfCode2019.Common
 
         private void RunRead(Mode param1Mode)
         {
-            if (!inputs.Any())
+            if (constInput == null && !inputs.Any())
             {
                 needsInput = true;
                 return;
             }
 
+            var input = constInput == null ? inputs.Dequeue() : constInput.Value;
             needsInput = false;
-            WriteToPos(inputs.Dequeue(), 1, param1Mode);
+            WriteToPos(input, 1, param1Mode);
             Index += 2;
         }
 

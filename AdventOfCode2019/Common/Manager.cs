@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Windows.Forms;
+using System.Threading;
+using System.Windows;
 
 namespace AdventOfCode2019.Common
 {
@@ -87,7 +88,6 @@ namespace AdventOfCode2019.Common
                 Console.WriteLine(result);
                 Console.WriteLine($"Elapsed time: {stopwatch.Elapsed.TotalSeconds} seconds");
                 this.WriteDataToClipboard(result?.ToString() ?? string.Empty);
-                Console.WriteLine("Result copied to clipboard.");
             }
             catch (Exception e)
             {
@@ -108,7 +108,15 @@ namespace AdventOfCode2019.Common
 
         public void WriteDataToClipboard(string data)
         {
-            Clipboard.SetText(data);
+            var clipboardAction = new Action(() =>
+            {
+                Clipboard.SetText(data);
+                Console.WriteLine("Result copied to clipboard.");
+            });
+
+            var thread = new Thread(new ThreadStart(clipboardAction));
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
         }
 
         private class SolutionMapping

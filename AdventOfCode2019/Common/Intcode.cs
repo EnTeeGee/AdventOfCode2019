@@ -52,6 +52,16 @@ namespace AdventOfCode2019.Common
             needsInput = input == null && !inputs.Any();
         }
 
+        public void ClearOutput()
+        {
+            outputs = new List<long>();
+        }
+
+        public void OverwriteAddress(int index, long value)
+        {
+            program[index] = value;
+        }
+
         public long[] RunToEnd()
         {
             while (!HasHalted && !needsInput)

@@ -8,11 +8,11 @@ namespace AdventOfCode2019.Common
     {
         private enum Mode { Position, Absolute, Relative }
 
-        private static readonly Dictionary<char, Mode> ModeMapping = new Dictionary<char, Mode>
+        private static readonly Dictionary<long, Mode> ModeMapping = new Dictionary<long, Mode>
         {
-            { '0', Mode.Position },
-            { '1', Mode.Absolute },
-            { '2', Mode.Relative }
+            { 0, Mode.Position },
+            { 1, Mode.Absolute },
+            { 2, Mode.Relative }
         };
 
         private long[] program;
@@ -89,41 +89,42 @@ namespace AdventOfCode2019.Common
             if (HasHalted)
                 return;
 
-            var instruction = program[Index].ToString().PadLeft(5, '0');
-            var param1Mode = ModeMapping[instruction[2]];
-            var param2Mode = ModeMapping[instruction[1]];
-            var param3Mode = ModeMapping[instruction[0]];
+            var instruction = program[Index];
+            var param1Mode = ModeMapping[(instruction / 100) % 10];
+            var param2Mode = ModeMapping[(instruction / 1000) % 10];
+            var param3Mode = ModeMapping[(instruction / 10000) % 10];
+            
 
-            switch (instruction.Substring(3))
+            switch (instruction % 100)
             {
-                case "01":
+                case 01:
                     RunAddition(param1Mode, param2Mode, param3Mode);
                     break;
-                case "02":
+                case 02:
                     RunMultiply(param1Mode, param2Mode, param3Mode);
                     break;
-                case "03":
+                case 03:
                     RunRead(param1Mode);
                     break;
-                case "04":
+                case 04:
                     RunWrite(param1Mode);
                     break;
-                case "05":
+                case 05:
                     RunJumpIfTrue(param1Mode, param2Mode);
                     break;
-                case "06":
+                case 06:
                     RunJumpIfFalse(param1Mode, param2Mode);
                     break;
-                case "07":
+                case 07:
                     RunLessThan(param1Mode, param2Mode, param3Mode);
                     break;
-                case "08":
+                case 08:
                     RunEquals(param1Mode, param2Mode, param3Mode);
                     break;
-                case "09":
+                case 09:
                     RunRelativeBaseOffset(param1Mode);
                     break;
-                case "99":
+                case 99:
                     HasHalted = true;
                     break;
                 default:

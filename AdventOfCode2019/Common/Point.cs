@@ -18,6 +18,11 @@ namespace AdventOfCode2019.Common
 
         public int Y { get; set; }
 
+        public int ManDistanceTo(Point to)
+        {
+            return Math.Abs(X - to.X) + Math.Abs(Y - to.Y);
+        }
+
         public override bool Equals(object obj)
         {
             if (!(obj is Point))

@@ -66,6 +66,7 @@
     <Compile Include="Solutions\Day13.cs" />
     <Compile Include="Solutions\Day14.cs" />
     <Compile Include="Solutions\Day15.cs" />
+    <Compile Include="Solutions\Day16.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

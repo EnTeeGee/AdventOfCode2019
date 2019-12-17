@@ -23,6 +23,17 @@ namespace AdventOfCode2019.Common
             return Math.Abs(X - to.X) + Math.Abs(Y - to.Y);
         }
 
+        public Point[] GetSurrounding()
+        {
+            return new Point[]
+            {
+                new Point(X, Y - 1),
+                new Point(X + 1, Y),
+                new Point(X, Y + 1),
+                new Point(X - 1, Y)
+            };
+        }
+
         public override bool Equals(object obj)
         {
             if (!(obj is Point))

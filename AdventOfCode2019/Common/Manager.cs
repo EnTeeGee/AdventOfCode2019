@@ -98,12 +98,24 @@ namespace AdventOfCode2019.Common
 
         public string ReadDataFromClipboard()
         {
-            if (!Clipboard.ContainsText())
-            {
-                return string.Empty;
-            }
+            var text = (string)null;
 
-            return Clipboard.GetText();
+            var clipboardAction = new Action(() =>
+            {
+                if (!Clipboard.ContainsText())
+                {
+                    text = string.Empty;
+                }
+
+                text = Clipboard.GetText();
+            });
+
+            var thread = new Thread(new ThreadStart(clipboardAction));
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join(TimeSpan.FromSeconds(5));
+
+            return text;
         }
 
         public void WriteDataToClipboard(string data)

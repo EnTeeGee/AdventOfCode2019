@@ -5,7 +5,6 @@ namespace AdventOfCode2019
 {
     class Program
     {
-        [STAThread]
         static void Main(string[] args)
         {
             var manager = new Manager();

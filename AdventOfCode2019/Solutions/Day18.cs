@@ -10,6 +10,8 @@ namespace AdventOfCode2019.Solutions
     class Day18
     {
         // 3524 too low
+        // 4254 too high
+        // 3694 too high
         [Solution(18, 1)]
         public int Problem1(string input)
         {
@@ -87,9 +89,10 @@ namespace AdventOfCode2019.Solutions
 
             foreach(var item in starterKeys)
             {
-                //keyDistances.Where(it => it.TargetKey != item.Key).ToList()
-
-                var dist = item.Value.Path.Count() - 1 + GetShortestDistance(new[] { item.Key }, new HashSet<string>(allKeys.Where(it => it != item.Key)), sourceDict, 0, bestDistance);
+                //var dist = item.Value.Path.Count() - 1 + GetShortestDistance(new[] { item.Key }, new HashSet<string>(allKeys.Where(it => it != item.Key)), sourceDict, 0, bestDistance);
+                //if (dist < bestDistance)
+                //    bestDistance = dist;
+                var dist = ShortestSearch2(item.Key, item.Value.Path.Count() - 1, allKeys.ToArray(), sourceDict);
                 if (dist < bestDistance)
                     bestDistance = dist;
             }
@@ -159,6 +162,107 @@ namespace AdventOfCode2019.Solutions
             return currentBest;
         }
 
+        private int ShortestSearch2(string startingPoint, int startingDistance, string[] allKeys, Dictionary<string, PathInfo[]> sourceDict)
+        {
+            // start with an empty list of progressinfos. Add to it one item, representing the distance to the starting point
+            // Then, while true:
+            // remove the highest ranked item from the end of list
+            // If this item has no more keys to find, return it. It's the best path
+            // else, find all the keys can can be reached from this key that still need to be got
+            // If there's no keys that can be reached, throw an error (Shouldn't get in this state)
+            // For each of these, create a new Progress info with the updated totalDistance and keys
+            // Add each of these to to the current list, then sort the list by total distnace, putting the shortest at the end
+
+            // Possible improvement: move it to a linked list and insert items in their correct position, rather than sorting it each time.
+
+            //var current = new List<ProgressInfo>();
+            var current2 = new LinkedList<ProgressInfo>();
+            var startingItem = new ProgressInfo();
+            startingItem.CurrentKey = startingPoint;
+            startingItem.CollectedKeys = new HashSet<string> { startingPoint };
+            startingItem.RemainingKeys = new HashSet<string>(allKeys.Where(it => it != startingPoint));
+            startingItem.TotalDistance = startingDistance;
+            //current.Add(startingItem);
+            current2.AddFirst(startingItem);
+
+            while (current2.Any())
+            {
+                //var best = current.First();
+                var best = current2.First.Value;
+                //current.RemoveAt(0);
+                current2.RemoveFirst();
+
+                if (!best.RemainingKeys.Any())
+                    return best.TotalDistance;
+
+                var reachableKeys = sourceDict[best.CurrentKey].Where(it => best.RemainingKeys.Contains(it.TargetKey));
+                reachableKeys = reachableKeys.Where(it => it.Doors.All(d => best.CollectedKeys.Contains(d))).ToArray();
+
+                if (!reachableKeys.Any())
+                    throw new Exception("Found point where no keys are reachable");
+
+                foreach(var item in reachableKeys)
+                {
+                    var newInfo = new ProgressInfo();
+                    newInfo.CurrentKey = item.TargetKey;
+                    newInfo.CollectedKeys = new HashSet<string>(best.CollectedKeys);
+                    newInfo.CollectedKeys.Add(item.TargetKey);
+                    newInfo.RemainingKeys = new HashSet<string>(best.RemainingKeys);
+                    newInfo.RemainingKeys.Remove(item.TargetKey);
+                    newInfo.TotalDistance = best.TotalDistance + item.Length;
+
+                    if (newInfo.TotalDistance >= 3694) // Limit returned by AoC
+                        continue;
+
+                    var matchingKeys = current2.FirstOrDefault(it => it.CurrentKey == newInfo.CurrentKey && HasSameKeys(newInfo.CollectedKeys, it.CollectedKeys));
+                    if(matchingKeys != null)
+                    {
+                        if (matchingKeys.TotalDistance < newInfo.TotalDistance)
+                            continue;
+                        else
+                            current2.Remove(matchingKeys);
+                    }
+
+                    //newInfo.WeightedDistance = (newInfo.TotalDistance * 2) / (double)(newInfo.CollectedKeys.Count * 3);
+                    //newInfo.WeightedDistance = newInfo.TotalDistance / (double)newInfo.CollectedKeys.Count;
+
+                    //current.Add(newInfo);
+
+                    if (!current2.Any() || current2.First.Value.TotalDistance > newInfo.TotalDistance)
+                    //if (!current2.Any() || current2.First.Value.WeightedDistance > newInfo.WeightedDistance)
+                        current2.AddFirst(newInfo);
+                    else if (current2.Last.Value.TotalDistance < newInfo.TotalDistance)
+                    //else if (current2.Last.Value.WeightedDistance < newInfo.WeightedDistance)
+                        current2.AddLast(newInfo);
+                    else
+                    {
+                        var latest = current2.Last;
+                        while (latest.Value.TotalDistance > newInfo.TotalDistance && latest.Previous != null)
+                        //while (latest.Value.WeightedDistance > newInfo.WeightedDistance && latest.Previous != null)
+                            latest = latest.Previous;
+
+                        current2.AddAfter(latest, newInfo);
+                    }
+                }
+
+                //current = current.OrderBy(it => it.TotalDistance).ToList();
+            }
+
+            return int.MaxValue;
+        }
+
+        private bool HasSameKeys(HashSet<string> first, HashSet<string> second)
+        {
+            if (first.Count != second.Count)
+                return false;
+
+            foreach (var item in first)
+                if (!second.Contains(item))
+                    return false;
+
+            return true;
+        }
+
         private class PathBuilder
         {
             public PathBuilder()
@@ -180,6 +284,19 @@ namespace AdventOfCode2019.Solutions
             public string[] Doors { get; set; }
 
             public int Length { get; set; }
+        }
+
+        private class ProgressInfo
+        {
+            public string CurrentKey { get; set; }
+
+            public HashSet<string> CollectedKeys { get; set; }
+
+            public HashSet<string> RemainingKeys { get; set; }
+
+            public int TotalDistance { get; set; }
+
+            public double WeightedDistance { get; set; }
         }
     }
 }

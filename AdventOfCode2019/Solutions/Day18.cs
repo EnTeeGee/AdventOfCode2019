@@ -298,5 +298,204 @@ namespace AdventOfCode2019.Solutions
 
             public double WeightedDistance { get; set; }
         }
+
+        private class SplitInfo
+        {
+            public string[] CurrentKeys { get; set; }
+
+            public HashSet<string> CollectedKeys { get; set; }
+
+            public HashSet<string> RemainingKeys { get; set; }
+
+            public int TotalDistance { get; set; }
+        }
+
+        [Solution(18, 2)]
+        public int Problem2(string input)
+        {
+            var lines = Mapper.ToLines(input);
+            var walkable = new HashSet<Point>();
+            var allKeys = new Dictionary<string, Point>();
+            var doors = new Dictionary<Point, string>();
+            var startPoint = new Point(0, 0);
+            var sourceDict = new Dictionary<string, PathInfo[]>[4];
+
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                for (var j = 0; j < line.Length; j++)
+                {
+                    var symbol = line[j];
+                    if (symbol == '#')
+                        continue;
+
+                    var point = new Point(j, i);
+                    walkable.Add(point);
+
+                    if (symbol == '.')
+                        continue;
+
+                    if (symbol == '@')
+                        startPoint = point;
+                    else if (char.IsLower(symbol))
+                        allKeys.Add(symbol.ToString().ToUpper(), point);
+                    else
+                        doors.Add(point, symbol.ToString());
+                }
+            }
+
+            var robots = new Point[]
+            {
+                new Point(startPoint.X - 1, startPoint.Y - 1), // top left
+                new Point(startPoint.X + 1, startPoint.Y - 1), // top right
+                new Point(startPoint.X + 1, startPoint.Y + 1), // bottom right
+                new Point(startPoint.X - 1, startPoint.Y + 1) // bottom left
+            };
+
+            var keysInSection = new Dictionary<string, Point>[]
+            {
+                allKeys.Where(it => it.Value.X < startPoint.X && it.Value.Y < startPoint.Y).ToDictionary(it => it.Key, it => it.Value), // top left
+                allKeys.Where(it => it.Value.X > startPoint.X && it.Value.Y < startPoint.Y).ToDictionary(it => it.Key, it => it.Value), // top right
+                allKeys.Where(it => it.Value.X > startPoint.X && it.Value.Y > startPoint.Y).ToDictionary(it => it.Key, it => it.Value), // bottom right
+                allKeys.Where(it => it.Value.X < startPoint.X && it.Value.Y > startPoint.Y).ToDictionary(it => it.Key, it => it.Value) // bottom left
+            };
+
+            var keyDistances = new List<PathInfo>[4];
+
+            for(var i = 0; i < robots.Length; i++)
+            {
+                keyDistances[i] = new List<PathInfo>();
+
+                foreach(var item in keysInSection[i])
+                {
+                    var builder = PathTo(robots[i], item.Value, walkable, doors);
+                    var info = new PathInfo
+                    {
+                        SourceKey = string.Empty,
+                        TargetKey = item.Key,
+                        Doors = builder.Doors.ToArray(),
+                        Length = builder.Path.Count - 1
+                    };
+                    keyDistances[i].Add(info);
+
+                    foreach(var target in keysInSection[i])
+                    {
+                        builder = PathTo(item.Value, target.Value, walkable, doors);
+                        info = new PathInfo
+                        {
+                            SourceKey = item.Key,
+                            TargetKey = target.Key,
+                            Doors = builder.Doors.ToArray(),
+                            Length = builder.Path.Count - 1
+                        };
+                        keyDistances[i].Add(info);
+                    }
+                }
+
+                sourceDict[i] = new Dictionary<string, PathInfo[]>();
+                sourceDict[i].Add(string.Empty, keyDistances[i].Where(it => it.SourceKey == string.Empty).ToArray());
+
+                foreach(var item in keysInSection[i])
+                {
+                    sourceDict[i].Add(item.Key, keyDistances[i].Where(it => it.SourceKey == item.Key).ToArray());
+                }
+            }
+
+            return MultiShortestSearch(allKeys.Keys.ToArray(), sourceDict);
+        }
+
+        private int MultiShortestSearch(string[] allKeys, Dictionary<string, PathInfo[]>[] pathInfo)
+        {
+            var available = new LinkedList<SplitInfo>();
+            var starting = new SplitInfo
+            {
+                CurrentKeys = Enumerable.Repeat(string.Empty, 4).ToArray(),
+                CollectedKeys = new HashSet<string>(),
+                RemainingKeys = new HashSet<string>(allKeys),
+                TotalDistance = 0
+            };
+
+            available.AddFirst(starting);
+
+            while (available.Any())
+            {
+                var best = available.First();
+                available.RemoveFirst();
+
+                if (!best.RemainingKeys.Any())
+                    return best.TotalDistance;
+
+                var furtherOptions = new List<SplitInfo>();
+
+                for(var i = 0; i < best.CurrentKeys.Length; i++)
+                {
+                    var robotOptions = pathInfo[i][best.CurrentKeys[i]].Where(it => it.Doors.All(d => best.CollectedKeys.Contains(d)));
+                    robotOptions = robotOptions.Where(it => !best.CollectedKeys.Contains(it.TargetKey)).ToList();
+
+                    foreach(var option in robotOptions)
+                    {
+                        var newSplit = new SplitInfo();
+                        newSplit.CurrentKeys = new string[4];
+                        best.CurrentKeys.CopyTo(newSplit.CurrentKeys, 0);
+                        newSplit.CurrentKeys[i] = option.TargetKey;
+                        newSplit.CollectedKeys = new HashSet<string>(best.CollectedKeys);
+                        newSplit.CollectedKeys.Add(option.TargetKey);
+                        newSplit.RemainingKeys = new HashSet<string>(best.RemainingKeys);
+                        newSplit.RemainingKeys.Remove(option.TargetKey);
+                        newSplit.TotalDistance = best.TotalDistance + option.Length;
+                        furtherOptions.Add(newSplit);
+                    }
+                }
+
+                foreach(var item in furtherOptions)
+                {
+                    var matchingItem = available.FirstOrDefault(it => AreSameSplit(it, item));
+
+                    if(matchingItem != null)
+                    {
+                        if (matchingItem.TotalDistance < item.TotalDistance)
+                            continue;
+                        else
+                            available.Remove(matchingItem);
+                    }
+
+                    if (!available.Any() || available.First.Value.TotalDistance > item.TotalDistance)
+                        available.AddFirst(item);
+                    else if (available.Last.Value.TotalDistance < item.TotalDistance)
+                        available.AddLast(item);
+                    else
+                    {
+                        var latest = available.Last;
+                        while (latest.Value.TotalDistance > item.TotalDistance && latest.Previous != null)
+                            latest = latest.Previous;
+
+                        available.AddAfter(latest, item);
+                    }
+                }
+            }
+
+            return 0;
+
+        }
+
+        private bool AreSameSplit(SplitInfo first, SplitInfo second)
+        {
+            for(var i = 0; i < first.CurrentKeys.Length; i++)
+            {
+                if (first.CurrentKeys[i] != second.CurrentKeys[i])
+                    return false;
+            }
+
+            if (first.CollectedKeys.Count != second.CollectedKeys.Count)
+                return false;
+
+            foreach(var item in first.CollectedKeys)
+            {
+                if (!second.CollectedKeys.Contains(item))
+                    return false;
+            }
+
+            return true;
+        }
     }
 }
